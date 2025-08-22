@@ -10,3 +10,5 @@
 [Oo]bj/
 *.cache
 *.log
+
+.env

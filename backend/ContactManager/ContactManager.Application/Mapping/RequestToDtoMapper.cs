@@ -15,6 +15,7 @@ namespace ContactManager.Application.Mapping
         public RequestToDtoMapper()
         {
             CreateMap<AuthRegisterRequest, AuthRegisterDto>();
+            CreateMap<AuthLoginRequest, AuthLoginDto>();
         }
     }
 }

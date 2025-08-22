@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using ContactManager.API.Dtos.Requests;
+using ContactManager.Application.Dtos.Responses;
 using ContactManager.Application.Services;
 using ContactManager.Domain.Dtos;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +27,20 @@ namespace ContactManager.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] AuthLoginRequest request)
         {
-            return Ok();
+            try
+            {
+                var loginDto = mapper.Map<AuthLoginDto>(request);
+                var token = await service.Login(loginDto);
+                return Ok(new LoginResponse { Token = token });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Unauthorized(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "An internal error occurred.");
+            }
         }
 
         [HttpPost("register")]

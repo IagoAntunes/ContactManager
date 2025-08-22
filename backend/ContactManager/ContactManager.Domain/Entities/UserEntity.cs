@@ -17,6 +17,10 @@ namespace ContactManager.Domain.Entities
         [BsonElement("PasswordHash")]
         public required string PasswordHash { get; set; }
 
+        [BsonElement("Roles")]
+        [BsonIgnoreIfNull]
+        public List<string> Roles { get; set; }
+
 
     }
 }
