@@ -62,6 +62,8 @@ namespace ContactManager.Infrastructure
 
             // --- Registro de Repositórios ---
             services.AddScoped<IAuthRepository, AuthRepository>();
+            services.AddScoped<IContactRepository, ContactRepository>();
+            services.AddScoped<IImageRepository, ImageRepository>();
 
             return services;
         }

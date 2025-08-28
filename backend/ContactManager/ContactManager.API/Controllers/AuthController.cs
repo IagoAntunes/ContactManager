@@ -3,13 +3,16 @@ using ContactManager.API.Dtos.Requests;
 using ContactManager.Application.Dtos.Responses;
 using ContactManager.Application.Services;
 using ContactManager.Domain.Dtos;
+using ContactManager.Domain.Result;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
+using System.Security.Claims;
 
 namespace ContactManager.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController : ControllerBase
+    public class AuthController : ApiBaseController
     {
         private readonly IAuthService service;
         private readonly IMapper mapper;
@@ -27,40 +30,38 @@ namespace ContactManager.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] AuthLoginRequest request)
         {
-            try
-            {
-                var loginDto = mapper.Map<AuthLoginDto>(request);
-                var token = await service.Login(loginDto);
-                return Ok(new LoginResponse { Token = token });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                return Unauthorized(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, "An internal error occurred.");
-            }
+            var loginDto = mapper.Map<AuthLoginDto>(request);
+            var result = await service.Login(loginDto);
+
+            var formattedResult = result.Map(token => new { Token = token });
+            return HandleResult(formattedResult);
         }
 
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] AuthRegisterRequest request)
         {
-            try
+            var registerDto = mapper.Map<AuthRegisterDto>(request);
+            var result = await service.Register(registerDto); 
+
+            if (result.IsFailure)
             {
-                var registerDto = mapper.Map<AuthRegisterDto>(request);
-                var user = await service.Register(registerDto);
-                return CreatedAtAction(nameof(Register), new { id = user.Value.Id }, new { user.Value.Id, user.Value.Name, user.Value.Email });
+                return StatusCode((int)GetStatusCode(result.Status), new { Message = result.Error });
             }
-            catch (InvalidOperationException ex)
+
+            var userDto = result.Value;
+            return CreatedAtAction(actionName: "GetUserById", controllerName: "Users", new { id = userDto.Id }, userDto);
+        }
+
+        private HttpStatusCode GetStatusCode(OperationStatus status)
+        {
+            return status switch
             {
-                return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                // Logar o erro aqui
-                return StatusCode(500, "An internal error occurred.");
-            }
+                OperationStatus.NotFound => HttpStatusCode.NotFound,
+                OperationStatus.Conflict => HttpStatusCode.Conflict,
+                OperationStatus.InvalidData => HttpStatusCode.BadRequest,
+                OperationStatus.ServerError => HttpStatusCode.InternalServerError,
+                _ => HttpStatusCode.InternalServerError
+            };
         }
 
     }

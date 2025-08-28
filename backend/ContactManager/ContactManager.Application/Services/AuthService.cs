@@ -1,6 +1,8 @@
-﻿using ContactManager.Domain.Dtos;
+﻿using AutoMapper;
+using ContactManager.Domain.Dtos;
 using ContactManager.Domain.Entities;
 using ContactManager.Domain.Repositories;
+using ContactManager.Domain.Result;
 
 namespace ContactManager.Application.Services
 {
@@ -8,27 +10,38 @@ namespace ContactManager.Application.Services
     {
         private readonly IAuthRepository authRepository;
         private readonly ITokenService tokenService;
+        private readonly IMapper mapper;
 
         public AuthService(
             IAuthRepository authRepository,
-            ITokenService tokenService
+            ITokenService tokenService,
+            IMapper mapper
             )
         {
             this.authRepository = authRepository;
             this.tokenService = tokenService;
+            this.mapper = mapper;
         }
 
-        public async Task<string> Login(AuthLoginDto loginDto)
+        public async Task<Result<UserDto>> GetUserData(string userId)
+        {
+            var resultGetUserData = await authRepository.GetUserData(userId);
+            var finalResult = resultGetUserData.Map(userEntity => mapper.Map<UserDto>(userEntity));
+
+            return finalResult;
+        }
+
+        public async Task<Result<string>> Login(AuthLoginDto loginDto)
         {
             var user = await authRepository.GetEmailAsync(loginDto.Email);
 
             if (user == null || !BCrypt.Net.BCrypt.Verify(loginDto.Password, user.PasswordHash))
             {
-                throw new UnauthorizedAccessException("Invalid credentials.");
+                return Result<string>.Failure(OperationStatus.InvalidData, $"Login ou Senha");
             }
 
             var token = tokenService.GenerateToken(user);
-            return token;
+            return Result<string>.Success(token);
         }
 
         public async Task<Result<UserDto>> Register(AuthRegisterDto registerDto)
@@ -36,7 +49,7 @@ namespace ContactManager.Application.Services
             var existingUser = await authRepository.GetEmailAsync(registerDto.Email);
             if (existingUser != null)
             {
-                throw new InvalidOperationException("Email already registered.");
+                return Result<UserDto>.Failure(OperationStatus.Conflict, $"Email ja existe");
             }
 
             var passwordHash = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
@@ -47,14 +60,10 @@ namespace ContactManager.Application.Services
                 PasswordHash = passwordHash,
                 Roles = new List<string> { "User" } 
             };
-            await authRepository.Register(newUser);
-            var userDto = new UserDto
-            {
-                Id = newUser.Id,
-                Name = newUser.Name,
-                Email = newUser.Email,
-            };
-            return Result.Success(userDto);
+            var resultCreateUser = await authRepository.Register(newUser);
+            var finalResult = resultCreateUser.Map(contactEntity => mapper.Map<UserDto>(contactEntity));
+
+            return finalResult;
         }
     }
 }

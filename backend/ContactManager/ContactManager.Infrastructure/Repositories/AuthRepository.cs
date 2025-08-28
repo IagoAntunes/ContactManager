@@ -1,6 +1,7 @@
 ﻿using ContactManager.Domain.Dtos;
 using ContactManager.Domain.Entities;
 using ContactManager.Domain.Repositories;
+using ContactManager.Domain.Result;
 using MongoDB.Driver;
 
 namespace ContactManager.Infrastructure.Repositories
@@ -20,10 +21,22 @@ namespace ContactManager.Infrastructure.Repositories
                                          .FirstOrDefaultAsync();
         }
 
-        public async Task<Result<bool>> Register(UserEntity user)
+        public async Task<Result<UserEntity>> GetUserData(string userId)
+        {
+            var user = await _usersCollection.Find(u => u.Id == userId)
+                                             .FirstOrDefaultAsync();
+
+            if (user == null)
+            {
+                return Result<UserEntity>.Failure(OperationStatus.Conflict, $"Usuário não encontrado");
+            }
+            return Result<UserEntity>.Success(user);
+        }
+
+        public async Task<Result<UserEntity>> Register(UserEntity user)
         {
             await _usersCollection.InsertOneAsync(user);
-            return Result.Success(true);
+            return Result<UserEntity>.Success(user);
         }
     }
 }

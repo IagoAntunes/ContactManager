@@ -1,59 +1,40 @@
-﻿using static System.Runtime.InteropServices.JavaScript.JSType;
+﻿using System.Buffers;
 
-public sealed record Error(string Code, string Message)
+namespace ContactManager.Domain.Result
 {
-    public static readonly Error None = new(string.Empty, string.Empty);
-}
-
-public class Result
-{
-    protected internal Result(bool isSuccess, Error error)
+    public class Result<T>
     {
-        if (isSuccess && error != Error.None ||
-            !isSuccess && error == Error.None)
+        public bool IsSuccess { get; }
+        public bool IsFailure => !IsSuccess;
+        public T Value { get; }
+        public OperationStatus Status { get; }
+        public string? Error { get; }
+
+        private Result(bool isSuccess, T value, OperationStatus status, string? error)
         {
-            throw new InvalidOperationException("Resultado inválido.");
+            IsSuccess = isSuccess;
+            Value = value;
+            Status = status;
+            Error = error;
         }
 
-        IsSuccess = isSuccess;
-        Error = error;
+        public static Result<T> Success(T value) =>
+            new Result<T>(true, value, OperationStatus.Success, null);
+
+        public static Result<T> Failure(OperationStatus status, string error)
+        {
+            if (status == OperationStatus.Success)
+            {
+                throw new ArgumentException("Não se pode criar uma falha com status de sucesso.", nameof(status));
+            }
+            return new Result<T>(false, default(T)!, status, error);
+        }
+
+        public Result<TOut> Map<TOut>(Func<T, TOut> mapper)
+        {
+            return IsSuccess
+                ? Result<TOut>.Success(mapper(Value))
+                : Result<TOut>.Failure(Status, Error!);
+        }
     }
-
-    public bool IsSuccess { get; }
-    public bool IsFailure => !IsSuccess;
-    public Error Error { get; }
-
-    public static Result<TValue> Success<TValue>(TValue value) => Result<TValue>.Success(value);
-
-    public static Result Success() => new(true, Error.None);
-    public static Result Failure(Error error) => new(false, error);
-
-    public static Result Failure() => new(false, Error.None);
-
-    public static Result<TValue> Failure<TValue>(Error error) => Result<TValue>.Failure<TValue>(error);
-
-    public static Result<TValue> Failure<TValue>() => Result<TValue>.Failure<TValue>();
-}
-
-public class Result<TValue> : Result
-{
-    private readonly TValue? _value;
-
-    protected internal Result(TValue? value, bool isSuccess, Error error)
-        : base(isSuccess, error)
-    {
-        _value = value;
-    }
-
-    public TValue Value => IsSuccess
-        ? _value!
-        : throw new InvalidOperationException("O valor de um resultado de falha não pode ser acessado.");
-
-    public static implicit operator Result<TValue>(TValue value) => Success(value);
-
-    public static Result<TValue> Success(TValue value) => new(value, true, Error.None);
-
-    public static new Result<TValue> Failure(Error error) => new(default, false, error);
-
-    public static new Result<TValue> Failure() => new(default, false, Error.None);
 }

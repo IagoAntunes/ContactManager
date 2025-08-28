@@ -15,8 +15,12 @@ namespace ContactManager.Application
             services.AddAutoMapper(cfg =>
             {
                 cfg.AddProfile<RequestToDtoMapper>();
+                cfg.AddProfile<EntityToDtoMapper>();
+                cfg.AddProfile<RequestToEntityMapper>();
             });
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IContactService, ContactService>();
+            services.AddScoped<IImageService, ImageService>();
 
             return services;
         }
