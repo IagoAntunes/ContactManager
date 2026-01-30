@@ -3,7 +3,8 @@ import { CinputComponent } from "../components/cinput/cinput.component";
 import { FormsModule } from '@angular/forms';
 import { CButtonComponent } from "../components/cbutton/cbutton.component";
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../services/auth-service';
+import { AuthService, RegisterRequest } from '../services/auth-service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -14,8 +15,12 @@ import { AuthService } from '../services/auth-service';
 })
 export class LoginComponent {
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
 
   isRegister: boolean = false;
+  loading = false;
+  error = '';
 
   email: string = '';
   password: string = '';
@@ -37,28 +42,44 @@ export class LoginComponent {
   }
 
   login(){
+    this.loading = true;
+    this.error = '';
     this.authService.login(this.email, this.password).subscribe(
       {
-        next: (v) => {
-          var token = v;
-          console.log(token);
+        next: (res) => {
+          this.authService.setToken(res); 
+          this.router.navigate(['/home']);
         },
-        error: (e) => console.error(e),
-        complete: () => console.info('complete')
+        error: (e) => {
+          console.error(e);
+          this.error = 'Login failed. Please try again.';
+        },
+        complete: () => this.loading = false
       }
     );
   }
 
   register(){
-    this.authService.register(this.name, this.lastName, this.email, this.password).subscribe(
+    this.loading = true;
+    this.error = '';
+    const request: RegisterRequest = {
+      name: this.name,
+      lastName: this.lastName,
+      email: this.email,
+      password: this.password,
+      roles: ['user']
+    }
+    this.authService.register(request).subscribe(
       {
         next: (v) => {
-          console.log('SUCESSO');
           this.resetForm();
           this.toggleForm();
         },
-        error: (e) => console.error(e),
-        complete: () => console.info('complete')
+        error: (e) => {
+          console.error(e);
+          this.error = 'Registration failed. Please try again.';
+        },
+        complete: () => this.loading = false
       }
     )
   }

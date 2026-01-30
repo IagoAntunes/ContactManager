@@ -11,6 +11,7 @@ export class CButtonComponent {
   @Input() disabled: boolean = false;
   @Input() fullWidth: boolean = false;
   @Output() buttonClick = new EventEmitter<Event>();
+  @Input() theme: 'primary' | 'secondary' = 'primary';
 
   onClick(event: Event) {
     this.buttonClick.emit(event);

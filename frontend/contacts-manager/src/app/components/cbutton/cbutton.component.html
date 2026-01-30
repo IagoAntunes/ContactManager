@@ -3,7 +3,14 @@
     [disabled]="disabled"
     class="cbutton"
     [class.full-width]="fullWidth"
+    [class.secondary]="theme === 'secondary'"
+    [class.primary]="theme === 'primary'"
     (click)="onClick($event)"
     >
-    <ng-content></ng-content>
+    <span class="cbutton-icon">
+        <ng-content select="[icon]"></ng-content>
+    </span>
+    <span class="cbutton-label">
+        <ng-content></ng-content>
+    </span>
 </button>
